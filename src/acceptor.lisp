@@ -1,21 +1,8 @@
 (in-package #:iolib-acceptor)
 
-(defclass iolib-acceptor (hunchentoot:acceptor)
-  ())
+(defclass iolib-acceptor-mixin () ())
 
-;; Mixin HUNCHENTOOT:EASY-ACCEPTOR to use that dispatch framework.
-(defclass iolib-easy-acceptor (hunchentoot:easy-acceptor iolib-acceptor)
-  ())
-
-#-:hunchentoot-no-ssl
-(defclass iolib-ssl-acceptor (hunchentoot:ssl-acceptor iolib-acceptor)
-  ())
-
-#-:hunchentoot-no-ssl
-(defclass iolib-easy-ssl-acceptor (hunchentoot:easy-acceptor iolib-ssl-acceptor)
-  ())
-
-(defmethod hunchentoot:stop ((acceptor iolib-acceptor) &key soft)
+(defmethod hunchentoot:stop :around ((acceptor iolib-acceptor-mixin) &key soft)
   (setf (hunchentoot::acceptor-shutdown-p acceptor) t)
   (shutdown (hunchentoot::acceptor-taskmaster acceptor))
   (when soft
@@ -27,7 +14,7 @@
   (setf (hunchentoot::acceptor-listen-socket acceptor) nil)
   acceptor)
 
-(defmethod hunchentoot:start-listening ((acceptor iolib-acceptor))
+(defmethod hunchentoot:start-listening :around ((acceptor iolib-acceptor-mixin))
   (when (hunchentoot::acceptor-listen-socket acceptor)
     (hunchentoot:hunchentoot-error "acceptor ~A is already listening" acceptor))
   (setf (hunchentoot::acceptor-listen-socket acceptor)
@@ -39,7 +26,7 @@
                              :backlog (hunchentoot::acceptor-listen-backlog acceptor)))
   (values))
 
-(defmethod hunchentoot:accept-connections ((acceptor iolib-acceptor))
+(defmethod hunchentoot:accept-connections :around ((acceptor iolib-acceptor-mixin))
   (let ((listener (hunchentoot::acceptor-listen-socket acceptor)))
     (unwind-protect
          (loop
