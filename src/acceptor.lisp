@@ -46,11 +46,11 @@
             (when (hunchentoot::acceptor-shutdown-p acceptor)
               (return))
             (when-let (client-connection
-                       (handler-case (sockets:accept-connection listener :wait t)
+                       (handler-case (sockets:accept-connection listener :wait hunchentoot::+new-connection-wait-time+)
                          (sockets:socket-connection-aborted-error ())))
-              (set-timeouts client-connection
-                            (hunchentoot:acceptor-read-timeout acceptor)
-                            (hunchentoot:acceptor-write-timeout acceptor))
+              (hunchentoot::set-timeouts client-connection
+                                         (hunchentoot:acceptor-read-timeout acceptor)
+                                         (hunchentoot:acceptor-write-timeout acceptor))
               (hunchentoot:handle-incoming-connection
                (hunchentoot::acceptor-taskmaster acceptor) client-connection)))
       (close listener))))
@@ -79,41 +79,11 @@
 
 (defun hunchentoot::set-timeouts (socket read-timeout write-timeout)
   (declare (ignorable socket read-timeout write-timeout))
-  ;; add other Lisps here if necessary
-  #+(or :sbcl :cmu)
-  (unless (eql read-timeout write-timeout)
-    (parameter-error "Read and write timeouts for socket must be equal."))
-  #+:clisp
-  (when read-timeout
-    (socket:socket-options (sockets:socket-os-fd socket) :SO-RCVTIMEO read-timeout))
-  #+:clisp
-  (when write-timeout
-    (socket:socket-options (sockets:socket-os-fd socket) :SO-SNDTIMEO write-timeout))
-  #+:ecl
-  (when read-timeout
-    (print (list (sockets:socket-os-fd socket) read-timeout))
-    (setf (sb-bsd-sockets:sockopt-receive-timeout (sockets:socket-os-fd socket))
-	  read-timeout))
-  #+:ecl
-  (when write-timeout
-    (print (list (sockets:socket-os-fd socket) write-timeout))
-    (setf (sb-bsd-sockets:sockopt-send-timeout (sockets:socket-os-fd socket))
-	  write-timeout))
-  #+:openmcl
-  (when read-timeout
-    (setf (ccl:stream-input-timeout (sockets:socket-os-fd socket))
-          read-timeout))
-  #+:openmcl
-  (when write-timeout
-    (setf (ccl:stream-output-timeout (sockets:socket-os-fd socket))
-          write-timeout))
-  #+:sbcl
-  (when read-timeout
-    (setf (sb-impl::fd-stream-timeout socket)
-          (coerce read-timeout 'single-float)))
-  #+:cmu
-  (setf (lisp::fd-stream-timeout socket)
-        (coerce read-timeout 'integer))
-  #-(or :clisp :allegro :openmcl :sbcl :lispworks :cmu :ecl)
-  (not-implemented 'set-timeouts))
+  (setf (sockets:socket-option socket :receive-timeout) read-timeout
+        (sockets:socket-option socket :send-timeout) write-timeout))
 
+(defun usocket::handle-condition (condition &optional socket)
+  (declare (ignore socket))
+  (typecase condition
+    (serious-condition (error condition))
+    (condition         (signal condition))))
