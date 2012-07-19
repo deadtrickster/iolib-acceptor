@@ -4,10 +4,10 @@
 
 (defmethod hunchentoot:stop :around ((acceptor iolib-acceptor-mixin) &key soft)
   (setf (hunchentoot::acceptor-shutdown-p acceptor) t)
-  (shutdown (hunchentoot::acceptor-taskmaster acceptor))
+  (sockets:shutdown (hunchentoot::acceptor-taskmaster acceptor))
   (when soft
     (bt:with-lock-held ((hunchentoot::acceptor-shutdown-lock acceptor))
-      (when (plusp (hunchentoot::acceptor-requests-in-progress acceptor))
+      (when (plusp (hunchentoot::accessor-requests-in-progress acceptor))
         (bt:condition-wait (hunchentoot::acceptor-shutdown-queue acceptor)
                            (hunchentoot::acceptor-shutdown-lock acceptor)))))
   (close (hunchentoot::acceptor-listen-socket acceptor))
@@ -59,9 +59,8 @@
 
 (defun hunchentoot::read-initial-request-line (stream)
   (handler-case
-      (let ((*current-error-message* "While reading initial request line:"))
-        (with-mapped-conditions ()
-          (read-line* stream)))
+      (let ((chunga:*current-error-message* "While reading initial request line:"))
+        (chunga:read-line* stream))
     ((or end-of-file sockets:socket-connection-timeout-error) ())))
 
 (defun hunchentoot::set-timeouts (socket read-timeout write-timeout)
