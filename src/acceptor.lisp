@@ -4,7 +4,7 @@
 
 (defmethod hunchentoot:stop :around ((acceptor iolib-acceptor-mixin) &key soft)
   (setf (hunchentoot::acceptor-shutdown-p acceptor) t)
-  (sockets:shutdown (hunchentoot::acceptor-taskmaster acceptor))
+  (hunchentoot:shutdown (hunchentoot::acceptor-taskmaster acceptor))
   (when soft
     (bt:with-lock-held ((hunchentoot::acceptor-shutdown-lock acceptor))
       (when (plusp (hunchentoot::accessor-requests-in-progress acceptor))
@@ -32,9 +32,9 @@
          (loop
             (when (hunchentoot::acceptor-shutdown-p acceptor)
               (return))
-            (when-let (client-connection
-                       (handler-case (sockets:accept-connection listener :wait hunchentoot::+new-connection-wait-time+)
-                         (sockets:socket-connection-aborted-error ())))
+            (when-let ((client-connection (handler-case
+                                              (sockets:accept-connection listener :wait hunchentoot::+new-connection-wait-time+)
+                                            (sockets:socket-connection-aborted-error ()))))
               (hunchentoot::set-timeouts client-connection
                                          (hunchentoot:acceptor-read-timeout acceptor)
                                          (hunchentoot:acceptor-write-timeout acceptor))

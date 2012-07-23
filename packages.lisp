@@ -1,3 +1,7 @@
+(in-package #:hunchentoot)
+
+(export '(+new-connection-wait-time+))
+
 (in-package #:common-lisp-user)
 
 (defpackage #:iolib-acceptor
