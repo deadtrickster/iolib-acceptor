@@ -3,9 +3,10 @@
   :license "MIT"
   :depends-on (#:hunchentoot
                #:iolib)
-  :serial t
   :components
-  ((:file "packages")
-   (:module :src
+  ((:module :src
+            :pathname "src/main/common-lisp"
+            :serial t
             :components
-            ((:file "acceptor")))))
+            ((:file "packages")
+             (:file "acceptor")))))
